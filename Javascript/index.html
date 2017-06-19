@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="lib/pako.js"></script>
+    <script src="lib/jquery.min.js"></script>
+</head>
+<body>
+
+<div>
+    当前价格:<span id="nowPrice">0</span>
+    <br>
+    量:<span id="nowAmount">0</span>
+    <br>
+    涨幅:<span id="zhangfu">0</span>
+</div>
+
+
+<script>
+
+    var webSocket = new WebSocket("wss://be.huobi.com/ws");
+    webSocket.binaryType = "arraybuffer";
+    webSocket.onopen = function(event){
+        console.log(("webSocket connect at time: "+new Date()));
+        webSocket.send(JSON.stringify({'sub': 'market.ethcny.kline.1day','id': 'depth ' + new Date()}));
+    }
+    webSocket.onmessage = function(event){
+        var raw_data = event.data;
+        window.raw_data = raw_data;
+        var ua = new Uint8Array(raw_data);
+        var json = pako.inflate(ua,{to:"string"});
+        var data = JSON.parse(json);
+        if(data["ping"]){
+            webSocket.send(JSON.stringify({"pong":data["ping"]}));
+        }
+        else{
+            console.log(data);
+
+            if(data.ch){
+                var tick = data.tick;
+                $("#nowPrice").html(data.tick.close);
+                $("#nowAmount").html(data.tick.amount+tick.count);
+                $("#zhangfu").html((Math.floor((tick.close-tick.open)/tick.open*100*100)/100)+"%")
+            }
+        }
+    }
+
+    webSocket.onclose = function(){
+        console.log("webSocket connect is closed");
+        console.log(arguments);
+    }
+
+    webSocket.onerror = function(){
+        console.log("error");
+        console.log(arguments);
+    }
+
+</script>
+
+
+</body>
+</html>
